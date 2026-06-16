@@ -1,38 +1,27 @@
-## .NET 便携版 SDK（几百 MB，不要提交）
-.dotnet/
-
-## 编译输出
-MdView/bin/
-MdView/obj/
-
-## 发布目录
-MdView/publish/
-**/publish/
-
-## 临时生成工具
-IconGen/
-
-## VS 用户设置
+## .NET
+bin/
+obj/
 *.user
 *.suo
-*.sln.docstates
+*.cache
+*.pdb
+
+## Build output
+MdView/publish_*/
+MdView/pub/
+MdView/MdView.exe
+MdView/W.exe
+
+## WebView runtime
+MdView.exe.WebView2/
+W.exe.WebView2/
+
+## IDE / tools
 .vs/
+.dotnet/
+.workbuddy/
+.vscode/
 
-## WebView2 运行时缓存
-**/*.WebView2/
-
-## 压缩包
-*.zip
-
-## 图片源文件（只保留 .ico）
-*.png
-*.jpg
-*.jpeg
-
-## 脚本文件
-gen_icon.*
-
-## 根目录试题文件
-IoT*.md
-IoT*.pdf
-assoc.*
+## OS
+Thumbs.db
+*.tmp

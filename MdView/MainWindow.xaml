@@ -3,262 +3,353 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="MdView"
-        Icon="app_icon.ico"
         Height="720" Width="1400"
         WindowStartupLocation="CenterScreen"
         FontFamily="system-ui, -apple-system, 'Microsoft YaHei', sans-serif"
-        FontSize="14">
-    <Window.Background>
-        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#F0FDF4" Offset="0.0"/>
-            <GradientStop Color="#F8FAFC" Offset="1.0"/>
-        </LinearGradientBrush>
-    </Window.Background>
+        FontSize="13"
+        AllowDrop="True"
+        Background="{DynamicResource WindowBackgroundBrush}">
 
-    <Window.Resources>
-        <!-- 翡翠绿主题色 -->
-        <Color x:Key="Emerald500">#10B981</Color>
-        <Color x:Key="Emerald50">#ECFDF5</Color>
-        <SolidColorBrush x:Key="EmeraldBrush" Color="#10B981"/>
-        <SolidColorBrush x:Key="EmeraldLightBrush" Color="#ECFDF5"/>
+    <Window.Resources/>
 
-        <!-- 文字色 -->
-        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#111827"/>
-        <SolidColorBrush x:Key="TextBodyBrush" Color="#1F2937"/>
-        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#9CA3AF"/>
-        <SolidColorBrush x:Key="IconForegroundBrush" Color="#4B5563"/>
-
-        <!-- 按钮底色 -->
-        <SolidColorBrush x:Key="DarkBtnBrush" Color="#1F2937"/>
-        <SolidColorBrush x:Key="LightGrayBrush" Color="#F3F4F6"/>
-        <SolidColorBrush x:Key="InputBgBrush" Color="#F9FAFB"/>
-
-        <!-- 弥散阴影（翡翠绿调） -->
-        <DropShadowEffect x:Key="CardShadow" BlurRadius="24" Opacity="0.08"
-                          ShadowDepth="4" Color="#10B981"/>
-
-        <!-- 侧边栏阴影 -->
-        <DropShadowEffect x:Key="SidebarShadow" BlurRadius="16" Opacity="0.06"
-                          ShadowDepth="2" Color="#10B981"/>
-
-        <!-- 按钮样式 — 深炭黑圆角矩形 -->
-        <Style x:Key="PrimaryBtn" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource DarkBtnBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}"
-                                CornerRadius="12" SnapsToDevicePixels="True">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                              Margin="{TemplateBinding Padding}"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#374151"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#111827"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 图标按钮样式 — 圆形浅灰背景 -->
-        <Style x:Key="IconBtn" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource LightGrayBrush}"/>
-            <Setter Property="Foreground" Value="{StaticResource IconForegroundBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Width" Value="36"/>
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}"
-                                CornerRadius="18" SnapsToDevicePixels="True">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#E5E7EB"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#D1D5DB"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 侧边栏列表项样式 -->
-        <Style x:Key="SidebarItem" TargetType="ListBoxItem">
-            <Setter Property="Padding" Value="12,6"/>
-            <Setter Property="Margin" Value="4,2,4,0"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{StaticResource TextBodyBrush}"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="bd" Background="{TemplateBinding Background}"
-                                CornerRadius="10" Padding="{TemplateBinding Padding}"
-                                Margin="{TemplateBinding Margin}">
-                            <ContentPresenter/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource EmeraldLightBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="#D1FAE5"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
-
-    <!-- 主布局 -->
-    <Grid Margin="12">
+    <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="10"/>
+            <ColumnDefinition Width="248"/>
             <ColumnDefinition Width="*"/>
+            <ColumnDefinition x:Name="InfoPanelCol" Width="220"/>
         </Grid.ColumnDefinitions>
 
-        <!-- ===== 侧边栏（卡片） ===== -->
-        <Border Grid.Column="0" Width="200"
-                Background="White" CornerRadius="16"
-                Effect="{StaticResource SidebarShadow}">
-            <DockPanel>
+        <!-- ═══════════════ 左侧导航栏 ═══════════════ -->
+        <Border Grid.Column="0"
+                Background="{DynamicResource SidebarBackgroundBrush}"
+                CornerRadius="0,16,16,0"
+                Effect="{DynamicResource SidebarShadow}"
+                Margin="0,8,0,8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
                 <!-- Logo -->
-                <Border DockPanel.Dock="Top" Padding="16,18,16,12">
-                    <TextBlock Text="MdView" FontSize="16" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextPrimaryBrush}"/>
+                <Border Grid.Row="0" Padding="20,24,20,4">
+                    <DockPanel>
+                        <TextBlock Text="MdView" FontSize="18" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                   VerticalAlignment="Center"/>
+                        <Button x:Name="ThemeToggleBtn" DockPanel.Dock="Right"
+                                Content="🌙" FontSize="16"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                Cursor="Hand" Padding="6,2"
+                                Click="OnThemeToggle" ToolTip="切换主题 (Ctrl+Shift+D)"/>
+                    </DockPanel>
                 </Border>
 
-                <!-- 底栏 -->
-                <Border DockPanel.Dock="Bottom" Background="#F9FAFB" CornerRadius="0,0,16,16"
-                        Padding="14,10">
-                    <StackPanel>
-                        <TextBlock x:Name="StatusText" Text="就绪" FontSize="10"
-                                   Foreground="{StaticResource TextSecondaryBrush}"/>
-                        <CheckBox x:Name="AutoRefreshCheck" Content="实时刷新" IsChecked="True"
-                                  FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"
-                                  Margin="0,4,0,0"/>
-                        <TextBlock Text="F5 刷新 · Ctrl+O 打开" FontSize="9"
-                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
-                    </StackPanel>
+                <!-- 搜索框 -->
+                <Border Grid.Row="1" Margin="16,12,16,0" Padding="10,8"
+                        Background="{DynamicResource InputBgBrush}" CornerRadius="10">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Left" Text="🔍" FontSize="13"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox x:Name="SearchBox" FontSize="12"
+                                 Background="Transparent" BorderThickness="0"
+                                 Foreground="{DynamicResource TextBodyBrush}"
+                                 CaretBrush="{DynamicResource TextBodyBrush}"
+                                 SelectionBrush="{DynamicResource EmeraldBrush}"
+                                 Height="22"
+                                 TextChanged="OnSearchFilter"/>
+                    </DockPanel>
                 </Border>
 
                 <!-- 最近文件标题 -->
-                <Grid DockPanel.Dock="Bottom" Margin="14,8,14,2">
+                <Grid Grid.Row="2" Margin="20,20,20,6">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="最近文件" FontSize="11" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextBodyBrush}" VerticalAlignment="Center"/>
+                               Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextOptions.TextFormattingMode="Display"
+                               VerticalAlignment="Center"/>
                     <Button Grid.Column="1" x:Name="ClearHistoryBtn" Content="✕" FontSize="9"
                             Background="Transparent" BorderThickness="0"
-                            Foreground="{StaticResource TextSecondaryBrush}"
-                            Cursor="Hand" Padding="4,0" Click="OnClearHistory"
+                            Foreground="{DynamicResource TextSecondaryBrush}"
+                            Cursor="Hand" Padding="4" Click="OnClearHistory"
                             ToolTip="清除历史"/>
                 </Grid>
 
                 <!-- 文件列表 -->
-                <ListBox x:Name="RecentFilesList" Background="White" BorderThickness="0"
-                         FontSize="12" Foreground="{StaticResource TextBodyBrush}"
+                <ListBox Grid.Row="3" x:Name="RecentFilesList" Margin="8,0,8,8"
+                         Background="Transparent" BorderThickness="0"
+                         FontSize="12" Foreground="{DynamicResource TextBodyBrush}"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                         ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                         PreviewMouseLeftButtonUp="OnRecentFileClick">
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         PreviewMouseLeftButtonUp="OnRecentFileClick"
+                         PreviewMouseRightButtonUp="OnRecentFileRightClick">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem" BasedOn="{StaticResource SidebarItem}"/>
                     </ListBox.ItemContainerStyle>
+                    <ListBox.ContextMenu>
+                        <ContextMenu x:Name="RecentContextMenu">
+                            <MenuItem Header="打开" Click="OnCtxOpen"/>
+                            <Separator/>
+                            <MenuItem Header="在左栏打开" Click="OnCtxOpenInLeft"/>
+                            <MenuItem Header="在右栏打开" Click="OnCtxOpenInRight"/>
+                            <Separator/>
+                            <MenuItem Header="在资源管理器中显示" Click="OnCtxRevealInExplorer"/>
+                            <MenuItem Header="复制文件路径"     Click="OnCtxCopyPath"/>
+                            <Separator/>
+                            <MenuItem Header="从历史中移除"     Click="OnCtxRemove"/>
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
                 </ListBox>
-            </DockPanel>
+
+                <!-- 实时刷新 + 面板切换 -->
+                <Border Grid.Row="4" Margin="16,0,16,12" Padding="12,10"
+                        Background="{DynamicResource InputBgBrush}" CornerRadius="10">
+                    <DockPanel>
+                        <CheckBox x:Name="AutoRefreshCheck" Content="实时刷新" IsChecked="True"
+                                  FontSize="12" Foreground="{DynamicResource TextBodyBrush}"
+                                  VerticalAlignment="Center"/>
+                        <Button x:Name="InfoPanelToggleBtn" DockPanel.Dock="Right"
+                                Background="Transparent" BorderThickness="0"
+                                Content="◀" FontSize="12" FontWeight="Bold"
+                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                Cursor="Hand" Padding="8,4"
+                                Click="OnToggleInfoPanel" ToolTip="隐藏信息面板"/>
+                    </DockPanel>
+                </Border>
+
+                <!-- 打开文件按钮 -->
+                <Border Grid.Row="5" Margin="16,0,16,20">
+                    <Button Content="📂  打开 Markdown 文件" Style="{StaticResource PrimaryBtn}"
+                            Width="Auto" Height="36" FontSize="12"
+                            Click="OnOpenL" ToolTip="Ctrl+O"/>
+                </Border>
+            </Grid>
         </Border>
 
-        <!-- ===== 主内容 ===== -->
-        <Grid x:Name="ContentGrid" Grid.Column="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="5"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+        <!-- ═══════════════ 中央内容区 ═══════════════ -->
+        <Grid x:Name="ContentGrid" Grid.Column="1" Margin="12,8,0,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <!-- 左面板（卡片） -->
-            <Grid Grid.Column="0" Effect="{StaticResource CardShadow}">
+            <Grid x:Name="SplitGrid" Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 左面板 -->
+                <Grid Grid.Column="0" Effect="{DynamicResource CardShadow}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Border x:Name="TitleBarL" Grid.Row="0"
+                            Background="{DynamicResource TitleBarBackgroundBrush}"
+                            CornerRadius="16,16,0,0"
+                            Padding="16,10" MouseDown="OnPanelFocusL">
+                        <DockPanel LastChildFill="True">
+                            <TextBlock x:Name="TitleTextL" Text="未选择"
+                                       FontSize="13" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock x:Name="PathTextL" Margin="10,0,0,0"
+                                       FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                            <Button Content="◫" Style="{StaticResource IconBtn}"
+                                    DockPanel.Dock="Right" ToolTip="切换分栏 (Ctrl+T)" Click="OnToggleSplit"
+                                    Margin="0,0,10,0"/>
+                            <Button Content="📄" Style="{StaticResource IconBtn}"
+                                    DockPanel.Dock="Right" ToolTip="打开文件" Click="OnOpenL"
+                                    Margin="0,0,0,0"/>
+                        </DockPanel>
+                    </Border>
+                    <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}"
+                            CornerRadius="0,0,16,16" Padding="0,0,0,2">
+                        <wv2:WebView2 x:Name="WebViewL" DefaultBackgroundColor="#FFFFFF"/>
+                    </Border>
+                </Grid>
+
+                <!-- 分隔条 -->
+                <GridSplitter x:Name="SplitterControl" Grid.Column="1" Width="6"
+                              HorizontalAlignment="Stretch" Background="Transparent"
+                              ResizeBehavior="PreviousAndNext" ShowsPreview="True" Cursor="SizeWE"/>
+
+                <!-- 右面板 -->
+                <Grid x:Name="RightPanel" Grid.Column="2" Effect="{DynamicResource CardShadow}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Border x:Name="TitleBarR" Grid.Row="0"
+                            Background="{DynamicResource TitleBarBackgroundBrush}"
+                            CornerRadius="16,16,0,0"
+                            Padding="16,10" MouseDown="OnPanelFocusR">
+                        <DockPanel LastChildFill="True">
+                            <TextBlock x:Name="TitleTextR" Text="未选择"
+                                       FontSize="13" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock x:Name="PathTextR" Margin="10,0,0,0"
+                                       FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                            <Button Content="◫" Style="{StaticResource IconBtn}"
+                                    DockPanel.Dock="Right" ToolTip="切换分栏 (Ctrl+T)" Click="OnToggleSplit"
+                                    Margin="0,0,10,0"/>
+                            <Button Content="📄" Style="{StaticResource IconBtn}"
+                                    DockPanel.Dock="Right" ToolTip="打开文件" Click="OnOpenR"
+                                    Margin="0,0,0,0"/>
+                        </DockPanel>
+                    </Border>
+                    <Border Grid.Row="1" Background="{DynamicResource CardBackgroundBrush}"
+                            CornerRadius="0,0,16,16" Padding="0,0,0,2">
+                        <wv2:WebView2 x:Name="WebViewR" DefaultBackgroundColor="#FFFFFF"/>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- 状态栏 -->
+            <Border Grid.Row="1" Margin="0,6,0,0" Padding="12,8"
+                    Background="{DynamicResource InputBgBrush}" CornerRadius="10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="StatusText" Text="Ctrl+O 打开  ·  拖入 md 文件  ·  Ctrl+T 分栏"
+                               FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" x:Name="KeymapText"
+                               FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
+                               Text="F5 刷新 ｜ Ctrl+F 查找 ｜ Ctrl+0/=/+/- 缩放 ｜ Ctrl+Shift+D 主题"
+                               VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- ═══════════════ 右侧信息面板 ═══════════════ -->
+        <Border x:Name="InfoPanel" Grid.Column="2"
+                Background="{DynamicResource SidebarBackgroundBrush}"
+                CornerRadius="16,0,0,16"
+                Margin="0,8,0,8"
+                Effect="{DynamicResource SidebarShadow}">
+            <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <Border x:Name="TitleBarL" Grid.Row="0" Background="White" CornerRadius="16,16,0,0"
-                        Padding="14,8" MouseDown="OnPanelFocusL">
-                    <DockPanel LastChildFill="True">
-                        <TextBlock x:Name="TitleTextL" Text="未选择"
-                                   FontSize="13" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextPrimaryBrush}"
-                                   VerticalAlignment="Center"/>
-                        <TextBlock x:Name="PathTextL" Margin="8,0,0,0"
-                                   FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"
-                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                        <Button x:Name="ToggleSplitBtn" Content="◫" Style="{StaticResource IconBtn}"
-                                DockPanel.Dock="Right" ToolTip="切换分栏" Click="OnToggleSplit"
-                                Margin="0,0,8,0"/>
-                        <Button Content="📂" Style="{StaticResource IconBtn}"
-                                DockPanel.Dock="Right" ToolTip="打开文件 (Ctrl+O)" Click="OnOpenL"
-                                Margin="0,0,0,0"/>
-                    </DockPanel>
-                </Border>
-                <Border Grid.Row="1" Background="White" CornerRadius="0,0,16,16" Padding="0,0,0,2">
-                    <wv2:WebView2 x:Name="WebViewL" DefaultBackgroundColor="#FFFFFF"/>
-                </Border>
-            </Grid>
-
-            <!-- 分隔条 -->
-            <GridSplitter x:Name="SplitterControl" Grid.Column="1" Width="5"
-                          HorizontalAlignment="Stretch" Background="Transparent"
-                          ResizeBehavior="PreviousAndNext" ShowsPreview="True" Cursor="SizeWE"/>
-
-            <!-- 右面板（卡片） -->
-            <Grid x:Name="RightPanel" Grid.Column="2" Effect="{StaticResource CardShadow}">
-                <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <Border x:Name="TitleBarR" Grid.Row="0" Background="White" CornerRadius="16,16,0,0"
-                        Padding="14,8" MouseDown="OnPanelFocusR">
-                    <DockPanel LastChildFill="True">
-                        <TextBlock x:Name="TitleTextR" Text="未选择"
-                                   FontSize="13" FontWeight="SemiBold"
-                                   Foreground="{StaticResource TextPrimaryBrush}"
+
+                <!-- 标题 -->
+                <Border Grid.Row="0" Padding="20,24,16,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="信息面板" FontSize="14" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"
                                    VerticalAlignment="Center"/>
-                        <TextBlock x:Name="PathTextR" Margin="8,0,0,0"
-                                   FontSize="10" Foreground="{StaticResource TextSecondaryBrush}"
-                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                        <Button Content="📂" Style="{StaticResource IconBtn}"
-                                DockPanel.Dock="Right" ToolTip="打开文件" Click="OnOpenR"
-                                Margin="0,0,4,0"/>
-                    </DockPanel>
+                        <Button Grid.Column="1"
+                                Content="✕" FontSize="14" FontWeight="Bold"
+                                Background="Transparent" BorderThickness="0"
+                                Foreground="{DynamicResource TextSecondaryBrush}"
+                                Cursor="Hand" Padding="6,4"
+                                Click="OnToggleInfoPanel" ToolTip="隐藏信息面板"/>
+                    </Grid>
                 </Border>
-                <Border Grid.Row="1" Background="White" CornerRadius="0,0,16,16" Padding="0,0,0,2">
-                    <wv2:WebView2 x:Name="WebViewR" DefaultBackgroundColor="#FFFFFF"/>
-                </Border>
+
+                <!-- 文件信息卡片 -->
+                <StackPanel Grid.Row="1" Margin="16,16,16,0">
+                    <!-- 文件信息 -->
+                    <Border Background="{DynamicResource InputBgBrush}"
+                            CornerRadius="12" Padding="16,14" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock Text="📄  文件信息" FontWeight="SemiBold" FontSize="12"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,10"/>
+                            <Grid Margin="0,2,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="文件名" FontSize="11" Width="50"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Grid.Column="1" x:Name="InfoFileName" Text="—" FontSize="11"
+                                           Foreground="{DynamicResource TextBodyBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                            <Grid Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="路径" FontSize="11" Width="50"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                <TextBlock Grid.Column="1" x:Name="InfoFilePath" Text="—" FontSize="11"
+                                           Foreground="{DynamicResource TextBodyBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 快捷键卡片 -->
+                    <Border Background="{DynamicResource EmeraldLightBrush}"
+                            CornerRadius="12" Padding="16,14">
+                        <StackPanel>
+                            <TextBlock Text="⚡  快捷键" FontWeight="SemiBold" FontSize="12"
+                                       Foreground="{DynamicResource EmeraldBrush}" Margin="0,0,0,10"/>
+                            <TextBlock FontSize="11" Foreground="{DynamicResource TextBodyBrush}" Margin="0,2,0,0">
+                                Ctrl+O<Run Foreground="{DynamicResource TextSecondaryBrush}"> 打开文件</Run>
+                            </TextBlock>
+                            <TextBlock FontSize="11" Foreground="{DynamicResource TextBodyBrush}" Margin="0,2,0,0">
+                                Ctrl+T<Run Foreground="{DynamicResource TextSecondaryBrush}"> 分栏</Run>
+                            </TextBlock>
+                            <TextBlock FontSize="11" Foreground="{DynamicResource TextBodyBrush}" Margin="0,2,0,0">
+                                Ctrl+F<Run Foreground="{DynamicResource TextSecondaryBrush}"> 查找</Run>
+                            </TextBlock>
+                            <TextBlock FontSize="11" Foreground="{DynamicResource TextBodyBrush}" Margin="0,2,0,0">
+                                F5<Run Foreground="{DynamicResource TextSecondaryBrush}"> 刷新</Run>
+                            </TextBlock>
+                            <TextBlock FontSize="11" Foreground="{DynamicResource TextBodyBrush}" Margin="0,2,0,0">
+                                Ctrl+Shift+D<Run Foreground="{DynamicResource TextSecondaryBrush}"> 主题</Run>
+                            </TextBlock>
+                            <TextBlock FontSize="11" Foreground="{DynamicResource TextBodyBrush}" Margin="0,2,0,0">
+                                Ctrl+0/+/−<Run Foreground="{DynamicResource TextSecondaryBrush}"> 缩放</Run>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- 底部装饰 -->
+                <StackPanel Grid.Row="2" Margin="16,10,16,20" VerticalAlignment="Bottom">
+                    <TextBlock Text="Powered by Markdig + WebView2"
+                               FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}"
+                               TextWrapping="Wrap" TextAlignment="Center"/>
+                </StackPanel>
             </Grid>
+        </Border>
+
+        <!-- 主题切换过渡遮罩（跨所有列 + 最高层级） -->
+        <Grid x:Name="TransitionOverlay"
+              Grid.Column="0" Grid.ColumnSpan="3"
+              Panel.ZIndex="999"
+              Opacity="0"
+              IsHitTestVisible="False"
+              HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Grid.Background>
+                <SolidColorBrush x:Name="TransitionBg" Color="#0F1419"/>
+            </Grid.Background>
         </Grid>
     </Grid>
 </Window>

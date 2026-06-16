@@ -11,6 +11,7 @@ namespace MdView
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+            ThemeManager.Initialize();
             var file = e.Args.Length > 0 && File.Exists(e.Args[0]) ? e.Args[0] : null;
             CreateWindow(file);
         }
