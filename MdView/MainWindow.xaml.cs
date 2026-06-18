@@ -109,10 +109,6 @@ namespace MdView
             UpdateThemeButton();
             try
             {
-                // 透明背景：CSS 变量完全控制颜色，遮罩揭起时已无闪变
-                var transparent = System.Drawing.Color.FromArgb(0, 0, 0, 0);
-                WebViewL.DefaultBackgroundColor = transparent;
-                WebViewR.DefaultBackgroundColor = transparent;
                 UpdateActivePanelVisual();
                 // WebView 内容由 AnimateThemeTransition 在遮罩后同步刷新
             }
@@ -120,23 +116,6 @@ namespace MdView
             {
                 LogErr("Theme change failed: " + ex.Message);
             }
-        }
-
-        private static System.Drawing.Color ParseColor(string hex)
-        {
-            try
-            {
-                hex = hex.TrimStart('#');
-                if (hex.Length == 6
-                    && byte.TryParse(hex.AsSpan(0, 2), System.Globalization.NumberStyles.HexNumber, null, out var r)
-                    && byte.TryParse(hex.AsSpan(2, 2), System.Globalization.NumberStyles.HexNumber, null, out var g)
-                    && byte.TryParse(hex.AsSpan(4, 2), System.Globalization.NumberStyles.HexNumber, null, out var b))
-                {
-                    return System.Drawing.Color.FromArgb(r, g, b);
-                }
-            }
-            catch { }
-            return System.Drawing.Color.White;
         }
 
         private void UpdateThemeButton()
@@ -165,36 +144,17 @@ namespace MdView
             });
         }
 
-        /// <summary>播放过渡动画后执行主题切换。遮罩等 WebView 也更新完再消失。</summary>
-        private async void AnimateThemeTransition(Action switchAction)
+        /// <summary>主题切换：同步切换 WPF 资源并注入 JS 更新 WebView。</summary>
+        private void AnimateThemeTransition(Action switchAction)
         {
             try
             {
-                // 变暗：0 → 0.6，150ms
-                var dimIn = new System.Windows.Media.Animation.DoubleAnimation(0, 0.6, TimeSpan.FromMilliseconds(150))
-                {
-                    EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseIn }
-                };
-                TransitionOverlay.BeginAnimation(UIElement.OpacityProperty, dimIn);
-                await System.Threading.Tasks.Task.Delay(140);
-
-                // 切换主题
                 switchAction();
-
-                // WebView JS 注入
                 var isDark = ThemeManager.Current == ThemeManager.Dark;
                 var js = $"setTheme({(isDark ? "true" : "false")})";
                 try { WebViewL?.CoreWebView2?.ExecuteScriptAsync(js); } catch { }
                 try { WebViewR?.CoreWebView2?.ExecuteScriptAsync(js); } catch { }
-
-                await System.Threading.Tasks.Task.Delay(60);
-
-                // 恢复：0.6 → 0，400ms
-                var fadeOut = new System.Windows.Media.Animation.DoubleAnimation(0.6, 0, TimeSpan.FromMilliseconds(400))
-                {
-                    EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut }
-                };
-                TransitionOverlay.BeginAnimation(UIElement.OpacityProperty, fadeOut);
+                TransitionOverlay.Opacity = 0;
             }
             catch { switchAction(); }
         }
@@ -206,8 +166,12 @@ namespace MdView
             ThemeManager.ApplyToWindow(this, saved);
             UpdateThemeButton();
 
-            WebViewL.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0, 0, 0, 0);
-            WebViewR.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0, 0, 0, 0);
+            // 先设置 WebView 默认背景避免闪白（跟随主题画布色）
+            var initBg = ThemeManager.Current == ThemeManager.Dark
+                ? System.Drawing.Color.FromArgb(0x0F, 0x13, 0x1A)  // WindowBackgroundBrush 暗色
+                : System.Drawing.Color.FromArgb(0xF1, 0xF5, 0xF9); // WindowBackgroundBrush 亮色
+            WebViewL.DefaultBackgroundColor = initBg;
+            WebViewR.DefaultBackgroundColor = initBg;
 
             try
             {
@@ -271,7 +235,7 @@ namespace MdView
             else if (hasLeft)
                 StatusText.Text = "提示：拖动最近文件到右栏可开启对比";
             else
-                StatusText.Text = "Ctrl+O 打开 Markdown 文件 ｜ 也可直接把 md 文件拖进窗口";
+                StatusText.Text = "Ctrl+O 打开 ｜ 直接拖入 md/pdf/xlsx/pptx/docx 文件 ｜ Ctrl+T 分栏";
             UpdateWindowTitle();
         }
 
@@ -363,6 +327,7 @@ namespace MdView
 
         private void OnPanelFocusL(object sender, MouseButtonEventArgs e)
         {
+            if (_stateL == null) return;
             _activePanel = _stateL;
             UpdateActivePanelVisual();
             StatusText.Text = "已选中左栏";
@@ -370,6 +335,7 @@ namespace MdView
 
         private void OnPanelFocusR(object sender, MouseButtonEventArgs e)
         {
+            if (_stateR == null) return;
             _activePanel = _stateR;
             UpdateActivePanelVisual();
             StatusText.Text = "已选中右栏";
@@ -496,8 +462,8 @@ namespace MdView
         {
             var dlg = new OpenFileDialog
             {
-                Filter = "Markdown 文件 (*.md;*.markdown;*.mkd)|*.md;*.markdown;*.mkd|所有文件 (*.*)|*.*",
-                Title = "选择 Markdown 文件"
+                Filter = "支持的文件 (*.md;*.markdown;*.mkd;*.pdf;*.xlsx;*.xls;*.pptx;*.docx)|*.md;*.markdown;*.mkd;*.pdf;*.xlsx;*.xls;*.pptx;*.docx|Markdown 文件 (*.md;*.markdown;*.mkd)|*.md;*.markdown;*.mkd|PDF 文件 (*.pdf)|*.pdf|Excel 文件 (*.xlsx;*.xls)|*.xlsx;*.xls|PowerPoint 文件 (*.pptx)|*.pptx|Word 文件 (*.docx)|*.docx|所有文件 (*.*)|*.*",
+                Title = "选择文件"
             };
             if (dlg.ShowDialog(this) == true) OpenFileInternal(state, dlg.FileName);
         }
@@ -624,6 +590,35 @@ namespace MdView
         private void ReloadFile(PanelState state)
         {
             if (string.IsNullOrEmpty(state.CurrentFile) || !File.Exists(state.CurrentFile)) return;
+
+            var ext = Path.GetExtension(state.CurrentFile).ToLowerInvariant();
+            try
+            {
+                switch (ext)
+                {
+                    case ".pdf":
+                        RenderPdf(state);
+                        return;
+                    case ".xlsx":
+                    case ".xls":
+                        RenderExcel(state);
+                        return;
+                    case ".pptx":
+                        RenderPpt(state);
+                        return;
+                    case ".docx":
+                        RenderDocx(state);
+                        return;
+                }
+            }
+            catch (Exception ex)
+            {
+                StatusText.Text = "读取失败: " + ex.Message;
+                LogErr("Reload office: " + ex);
+                return;
+            }
+
+            // ─────────── 以下为原始 Markdown 渲染逻辑 ───────────
             try
             {
                 var fi = new FileInfo(state.CurrentFile);
@@ -652,6 +647,305 @@ namespace MdView
             }
         }
 
+        // ═══════════════ PDF / Excel / PPT 渲染 ═══════════════
+
+        private void RenderPdf(PanelState state)
+        {
+            if (string.IsNullOrEmpty(state.CurrentFile)) return;
+            var fi = new FileInfo(state.CurrentFile);
+            if (fi.Length > 50 * 1024 * 1024)
+            {
+                state.WebView.NavigateToString("<!DOCTYPE html><html><body style='padding:40px;color:#666;font-family:sans-serif'><h2>文件过大</h2><p>超过 50MB 限制，无法预览</p></body></html>");
+                return;
+            }
+
+            try
+            {
+                // 生成一个临时 HTML 页面，用 <embed> 嵌入 PDF
+                // 临时文件放在 PDF 同目录，HTML 与 PDF 同源，避免跨域限制
+                var dir = Path.GetDirectoryName(state.CurrentFile);
+                var name = Path.GetFileName(state.CurrentFile);
+                if (string.IsNullOrEmpty(dir) || string.IsNullOrEmpty(name)) return;
+
+                var tempHtml = Path.Combine(dir, "~mdview_pdf.html");
+                var htmlContent = $@"<!DOCTYPE html>
+<html><head><meta charset='utf-8'/>
+<meta name='viewport' content='width=device-width,initial-scale=1'/>
+<style>
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  html,body {{ width:100%; height:100vh; overflow:hidden; background:transparent; }}
+  embed {{ width:100%; height:100vh; display:block; }}
+</style>
+</head><body>
+  <embed src=""{System.Security.SecurityElement.Escape(name)}"" type=""application/pdf"" />
+</body></html>";
+                File.WriteAllText(tempHtml, htmlContent);
+                state.WebView.CoreWebView2.Navigate(new Uri(tempHtml).AbsoluteUri);
+
+                // 延迟删除临时文件（5秒后）
+                var tempPath = tempHtml;
+                System.Threading.Tasks.Task.Delay(5000).ContinueWith(_ =>
+                {
+                    try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+                });
+            }
+            catch (Exception ex)
+            {
+                // 清理可能已创建的临时文件
+                try
+                {
+                    var tempPath = Path.Combine(Path.GetDirectoryName(state.CurrentFile) ?? "", "~mdview_pdf.html");
+                    if (File.Exists(tempPath)) File.Delete(tempPath);
+                }
+                catch { }
+
+                LogErr("RenderPdf embed: " + ex.Message);
+                // 降级到文本提取
+                var content = FileConverter.PdfToHtml(state.CurrentFile);
+                var html = BuildOfficePage(content, state);
+                state.WebView.NavigateToString(html);
+            }
+        }
+
+        private void RenderDocx(PanelState state)
+        {
+            if (string.IsNullOrEmpty(state.CurrentFile)) return;
+            var fi = new FileInfo(state.CurrentFile);
+            if (fi.Length > 50 * 1024 * 1024)
+            {
+                state.WebView.NavigateToString("<!DOCTYPE html><html><body style='padding:40px;color:#666;font-family:sans-serif'><h2>文件过大</h2><p>超过 50MB 限制，无法预览</p></body></html>");
+                return;
+            }
+            var content = FileConverter.DocxToHtml(state.CurrentFile);
+            var html = BuildOfficePage(content, state);
+            state.WebView.NavigateToString(html);
+        }
+
+        private void RenderExcel(PanelState state)
+        {
+            if (string.IsNullOrEmpty(state.CurrentFile)) return;
+            var fi = new FileInfo(state.CurrentFile);
+            if (fi.Length > 50 * 1024 * 1024)
+            {
+                state.WebView.NavigateToString("<!DOCTYPE html><html><body style='padding:40px;color:#666;font-family:sans-serif'><h2>文件过大</h2><p>超过 50MB 限制，无法预览</p></body></html>");
+                return;
+            }
+            var content = FileConverter.ExcelToHtml(state.CurrentFile);
+            var html = BuildOfficePage(content, state);
+            state.WebView.NavigateToString(html);
+        }
+
+        private void RenderPpt(PanelState state)
+        {
+            if (string.IsNullOrEmpty(state.CurrentFile)) return;
+            var fi = new FileInfo(state.CurrentFile);
+            if (fi.Length > 50 * 1024 * 1024)
+            {
+                state.WebView.NavigateToString("<!DOCTYPE html><html><body style='padding:40px;color:#666;font-family:sans-serif'><h2>文件过大</h2><p>超过 50MB 限制，无法预览</p></body></html>");
+                return;
+            }
+            var content = FileConverter.PptToHtml(state.CurrentFile);
+            var html = BuildOfficePage(content, state);
+            state.WebView.NavigateToString(html);
+        }
+
+        /// <summary>为 Office 文件构建带主题 CSS 的完整 HTML 页面。</summary>
+        private string BuildOfficePage(string bodyHtml, PanelState state)
+        {
+            var isDark = IsDarkTheme();
+            var cBg = BrushHex("WindowBackgroundBrush", "#F1F5F9");
+            var cText = BrushHex("TextBodyBrush", "#1F2937");
+            var cHeading = BrushHex("TextPrimaryBrush", "#111827");
+            var cSecondary = BrushHex("TextSecondaryBrush", "#64748B");
+            var cBorder = BrushHex("LightGrayBrush", "#E2E8F0");
+            var cAccent = TryBrushHex("EmeraldBrush") ?? "#3182CE";
+            var cCodeBg = BrushHex("LightGrayBrush", "#F1F5F9");
+
+            var dkBg = "#0F131A";
+            var dkText = "#E2E8F0";
+            var dkHeading = "#F7FAFC";
+            var dkSecondary = "#A0AEC0";
+            var dkBorder = "#4A5568";
+            var dkCodeBg = "#2D3748";
+
+            var css = $@"
+:root {{
+  --bg:{cBg}; --text:{cText}; --heading:{cHeading}; --secondary:{cSecondary};
+  --border:{cBorder}; --accent:{cAccent}; --code-bg:{cCodeBg};
+}}
+html.dark {{
+  --bg:{dkBg}; --text:{dkText}; --heading:{dkHeading}; --secondary:{dkSecondary};
+  --border:{dkBorder}; --code-bg:{dkCodeBg};
+}}
+
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+html,body {{ background:var(--bg); color:var(--text); font-family:'Microsoft YaHei','PingFang SC',sans-serif; }}
+body {{ line-height:1.65; padding:0; transition:background-color .3s ease,color .3s ease; }}
+
+/* ═══ 顶部工具栏 ═══ */
+.toolbar {{
+  position:sticky; top:0; z-index:100;
+  background:var(--bg); border-bottom:1px solid var(--border);
+  padding:10px 20px; display:flex; align-items:center; gap:12px;
+  transition:background-color .3s ease,border-color .3s ease;
+}}
+.toolbar-left {{ flex:1; }}
+.toolbar-center {{ display:flex; align-items:center; gap:8px; }}
+.toolbar-right {{ flex:1; display:flex; justify-content:flex-end; gap:8px; }}
+.file-name {{ font-size:14px; font-weight:600; color:var(--heading); }}
+.file-meta {{ font-size:12px; color:var(--secondary); margin-left:8px; }}
+.btn {{
+  background:transparent; border:1px solid var(--border); color:var(--text);
+  padding:5px 12px; border-radius:6px; cursor:pointer; font-size:13px;
+  display:inline-flex; align-items:center; gap:4px; transition:all .2s;
+}}
+.btn:hover {{ background:var(--border); }}
+.btn-icon {{ width:32px; height:32px; padding:0; justify-content:center; }}
+.page-info {{ font-size:13px; color:var(--secondary); }}
+
+/* ═══ 主内容区（Markdown 风格）═══ */
+.content {{
+  max-width:100%; margin:0 auto; padding:24px 20px 40px;
+}}
+.content h1 {{
+  font-size:1.5em; font-weight:600; color:var(--heading);
+  margin:1em 0 .5em; padding-bottom:.3em; border-bottom:2px solid var(--accent);
+}}
+.content h2 {{
+  font-size:1.25em; font-weight:600; color:var(--heading);
+  margin:1em 0 .4em; padding-bottom:.2em; border-bottom:1px solid var(--border);
+}}
+.content p {{
+  margin:.6em 0; font-size:14px; line-height:1.7;
+}}
+.content blockquote {{
+  border-left:3px solid var(--accent); background:var(--code-bg);
+  padding:.5em 1em; margin:.8em 0; border-radius:0 4px 4px 0;
+  color:var(--secondary);
+}}
+.content code {{
+  font-family:'Consolas','JetBrains Mono',monospace;
+  background:var(--code-bg); padding:2px 6px; border-radius:3px;
+  font-size:.9em;
+}}
+.content pre {{
+  background:var(--code-bg); padding:12px 16px; border-radius:8px;
+  overflow-x:auto; margin:.8em 0; font-size:12px; line-height:1.5;
+}}
+.content table {{
+  border-collapse:collapse; width:100%; margin:1em 0; font-size:13px;
+}}
+.content th, .content td {{
+  border:1px solid var(--border); padding:6px 12px; text-align:left;
+}}
+.content th {{
+  background:var(--code-bg); font-weight:600; color:var(--heading);
+}}
+.content tr:hover td {{
+  background:rgba(0,0,0,.02);
+}}
+html.dark .content tr:hover td {{
+  background:rgba(255,255,255,.03);
+}}
+.content img {{
+  max-width:100%; border-radius:4px; margin:.5em 0;
+}}
+
+/* ═══ 页面分隔线 ═══ */
+.page-break {{
+  text-align:center; margin:32px 0; position:relative;
+}}
+.page-break::before {{
+  content:''; position:absolute; top:50%; left:0; right:0;
+  height:1px; background:var(--border);
+}}
+.page-break span {{
+  background:var(--bg); padding:0 16px; position:relative;
+  font-size:12px; color:var(--secondary);
+}}
+
+/* PDF 连续文本流 */
+.pdf-line {{
+    background:transparent !important;
+    border:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    display:inline !important;
+}}
+.pdf-line + .pdf-line {{
+    display:block !important;
+    margin-bottom:0.6em !important;
+}}
+.pdf-code {{
+    display:block !important;
+    background:var(--code-bg) !important;
+    padding:8px 12px !important;
+    border-radius:6px !important;
+    margin:0.5em 0 !important;
+    font-family:'Consolas','JetBrains Mono',monospace !important;
+    font-size:12px !important;
+    line-height:1.5 !important;
+    overflow-x:auto !important;
+    white-space:pre !important;
+}}
+
+/* Excel 表格 */
+.sheet-title {{ font-size:1em; color:var(--heading); font-weight:600; margin:12px 0 6px; padding-bottom:4px; border-bottom:2px solid var(--accent); }}
+.excel-table {{ border-collapse:collapse; width:100%; font-size:12px; margin:0; }}
+.excel-table th,.excel-table td {{ border:1px solid var(--border); padding:4px 10px; white-space:nowrap; }}
+.excel-table th {{ background:var(--code-bg); font-weight:600; color:var(--heading); position:sticky; top:0; }}
+.excel-table tr:nth-child(even) td {{ background:rgba(0,0,0,.02); }}
+html.dark .excel-table tr:nth-child(even) td {{ background:rgba(255,255,255,.03); }}
+.excel-table tr:hover td {{ background:rgba(0,0,0,.04); }}
+html.dark .excel-table tr:hover td {{ background:rgba(255,255,255,.06); }}
+
+/* PPT 幻灯片 */
+.ppt-slide {{ background:var(--bg); border:1px solid var(--border); border-radius:10px; margin:0 0 14px; overflow:hidden; }}
+.ppt-slide-header {{ background:var(--code-bg); padding:7px 14px; font-size:11px; font-weight:600; color:var(--heading); border-bottom:1px solid var(--border); }}
+.ppt-slide-body {{ padding:10px 16px 12px; }}
+.ppt-text {{ margin:.25em 0; line-height:1.65; font-size:13px; }}
+
+/* 通用 */
+.error-msg {{ color:#EF4444; }}
+.empty-msg {{ color:var(--text); opacity:.5; font-style:italic; }}
+
+/* 滚动条 */
+::-webkit-scrollbar {{ width:8px; height:8px; }}
+::-webkit-scrollbar-track {{ background:transparent; }}
+::-webkit-scrollbar-thumb {{ background:var(--border); border-radius:4px; }}
+::-webkit-scrollbar-thumb:hover {{ background:var(--secondary); }}
+";
+            var htmlClass = isDark ? " class='dark'" : "";
+
+            return $@"<!DOCTYPE html>
+<html{htmlClass} style=""background:{cBg}"">
+<head>
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<style>{css}</style>
+</head>
+<body>
+  <div class='toolbar'>
+    <div class='toolbar-left'>
+      <span class='file-name'>{System.Security.SecurityElement.Escape(Path.GetFileName(state.CurrentFile))}</span>
+      <span class='file-meta'>{FileConverter.FormatSizeBytes(new FileInfo(state.CurrentFile).Length)}</span>
+    </div>
+    <div class='toolbar-center'>
+      <span class='page-info'>预览</span>
+      <button class='btn btn-icon' onclick='location.reload()' title='刷新'>↻</button>
+    </div>
+    <div class='toolbar-right'>
+      <button class='btn' onclick='window.print()'>🖨 打印</button>
+    </div>
+  </div>
+
+  <div class='content'>
+    {bodyHtml}
+  </div>
+</body>
+</html>";
+        }
+
         private static string StripBom(string s)
         {
             if (s.Length >= 1 && s[0] == '\uFEFF') return s.Substring(1);
@@ -675,7 +969,7 @@ namespace MdView
         private string Render(string bodyHtml, PanelState state, string frontMatterCard)
         {
             // 用 CSS 变量实现双主题，切换时只改 class 无需整页重载
-            var cBg        = BrushHex("CardBackgroundBrush", "#FFFFFF");
+            var cBg        = BrushHex("WindowBackgroundBrush", "#F1F5F9");
             var cText      = BrushHex("TextBodyBrush", "#1F2937");
             var cHeading   = BrushHex("TextPrimaryBrush", "#111827");
             var cH1Border  = BrushHex("DarkBtnBrush", "#1F2937");
@@ -725,7 +1019,7 @@ html.dark {{
   --fm-bg:{dkFmBg};
   --bg-rgb: 28,35,46;
 }}
-html,body {{ margin:0; padding:0; background:var(--bg); color:var(--text); }}
+html,body {{ margin:0; padding:0; background:var(--bg); color:var(--text); transition:background-color .3s ease,color .3s ease; }}
 body {{ font-family:'Microsoft YaHei','PingFang SC',Segoe UI,Helvetica,Arial,sans-serif; font-size:14px; line-height:1.65; padding:16px 20px 40px; }}
 h1,h2,h3,h4,h5,h6,p,a,li,code,pre,blockquote,table,th,td,tr,hr,.fm-card,.fm-line,.fm-key,.fm-val {{ transition:background-color .35s ease,color .35s ease,border-color .35s ease; }}
 h1,h2,h3,h4,h5,h6 {{ color:var(--heading); font-weight:600; margin:1em 0 .4em; line-height:1.3; }}
@@ -754,6 +1048,10 @@ input[type=checkbox] {{ margin-right:.3em; vertical-align:-2px; }}
 .fm-key {{ min-width:80px; color:var(--quote-text); font-weight:600; }}
 .fm-val {{ color:var(--text); word-break:break-all; }}
 .task-list {{ list-style:none; padding-left:0; }}
+::-webkit-scrollbar {{ width:8px; height:8px; }}
+::-webkit-scrollbar-track {{ background:transparent; }}
+::-webkit-scrollbar-thumb {{ background:var(--table-bdr); border-radius:4px; }}
+::-webkit-scrollbar-thumb:hover {{ background:var(--quote-text); }}
 ";
 
             // theme CSS 注入函数 + 现有 JS
@@ -793,7 +1091,7 @@ function setTheme(dark){{
             var htmlClass = IsDarkTheme() ? " class='dark'" : "";
 
             return $@"<!DOCTYPE html>
-<html{htmlClass}><head><meta charset='utf-8'/>
+<html{htmlClass} style=""background:{cBg}""><head><meta charset='utf-8'/>
 <meta name='viewport' content='width=device-width,initial-scale=1'/>
 <link rel='stylesheet' href='{prismTheme}'/>
 <style>{css}</style>
@@ -826,7 +1124,7 @@ function setTheme(dark){{
                 var js = "window.find(prompt('查找:', ''), false, false, true, false, false, false)";
                 state.WebView.CoreWebView2.ExecuteScriptAsync(js);
             }
-            catch { }
+            catch (Exception ex) { LogErr("Find: " + ex.Message); }
         }
 
         private void SetZoom(PanelState state, double scale)
@@ -838,7 +1136,7 @@ function setTheme(dark){{
                          $"(document.documentElement.style.fontSize=({state.FontScale*14})+'px');";
                 state.WebView.ExecuteScriptAsync(js);
             }
-            catch { }
+            catch (Exception ex) { LogErr("Zoom script: " + ex.Message); }
             if (state.CurrentFile != null)
                 StatusText.Text = $"缩放: {(int)(state.FontScale * 100)}%";
         }
@@ -866,7 +1164,9 @@ function setTheme(dark){{
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Owner = this,
                 ResizeMode = System.Windows.ResizeMode.NoResize,
-                Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White)
+                Background = new System.Windows.Media.SolidColorBrush(
+                    IsDarkTheme() ? System.Windows.Media.Color.FromRgb(30, 35, 46)
+                                  : System.Windows.Media.Colors.White)
             };
             var stack = new StackPanel { Margin = new Thickness(16) };
             var header = new TextBlock { Text = "字号比例 (50% - 250%)", FontSize = 12, Margin = new Thickness(0, 0, 0, 6) };
@@ -1185,38 +1485,41 @@ function setTheme(dark){{
             var dropped = (string[])e.Data.GetData(DataFormats.FileDrop);
             if (dropped == null || dropped.Length == 0) return;
 
-            var mdFiles = dropped.Where(p =>
+            var supportedFiles = dropped.Where(p =>
             {
                 try
                 {
                     if (!File.Exists(p)) return false;
                     var ext = Path.GetExtension(p).ToLowerInvariant();
-                    return ext == ".md" || ext == ".markdown" || ext == ".mkd" || ext == ".mdown";
+                    return ext == ".md" || ext == ".markdown" || ext == ".mkd" || ext == ".mdown"
+                        || ext == ".pdf" || ext == ".xlsx" || ext == ".xls" || ext == ".pptx" || ext == ".docx";
                 }
                 catch { return false; }
             }).ToList();
 
-            if (mdFiles.Count == 0)
+            if (supportedFiles.Count == 0)
             {
-                StatusText.Text = "拖入的不是 Markdown 文件";
+                StatusText.Text = "拖入的不是支持的文件类型（支持 md/pdf/xlsx/pptx）";
                 return;
             }
 
-            if (mdFiles.Count >= 2 && _stateL != null && _stateR != null)
+            if (supportedFiles.Count >= 2 && _stateL != null && _stateR != null)
             {
                 SetSplitMode(true);
-                OpenFileInternal(_stateL, mdFiles[0]);
-                OpenFileInternal(_stateR, mdFiles[1]);
+                OpenFileInternal(_stateL, supportedFiles[0]);
+                OpenFileInternal(_stateR, supportedFiles[1]);
                 _activePanel = _stateL;
                 UpdateActivePanelVisual();
             }
             else
             {
                 var target = _activePanel ?? _stateL;
-                if (!_isSplitMode || !string.IsNullOrEmpty(target.CurrentFile) && string.IsNullOrEmpty(_stateR?.CurrentFile))
-                    target = _stateR != null && string.IsNullOrEmpty(_stateR.CurrentFile) && _isSplitMode ? _stateR : target;
+                // 分栏模式下左栏有文件、右栏为空 → 填入右栏
+                if (_isSplitMode && _stateR != null && !string.IsNullOrEmpty(target.CurrentFile) && string.IsNullOrEmpty(_stateR.CurrentFile))
+                    target = _stateR;
+                // 目标为右栏但未分栏 → 自动开启分栏
                 if (target == _stateR && !_isSplitMode) SetSplitMode(true);
-                OpenFileInternal(target, mdFiles[0]);
+                OpenFileInternal(target, supportedFiles[0]);
                 _activePanel = target;
                 UpdateActivePanelVisual();
             }
@@ -1237,7 +1540,7 @@ function setTheme(dark){{
                     InfoFilePath.Text = "—";
                 }
             }
-            catch { }
+            catch (Exception ex) { LogErr("UpdateInfoPanel: " + ex.Message); }
         }
 
         private void OnToggleInfoPanel(object sender, RoutedEventArgs e)

@@ -118,16 +118,14 @@ namespace MdView
             return dict;
         }
 
-        /// <summary>应用主题到窗口（使用缓存的字典，无需重建）。</summary>
+        /// <summary>应用主题到窗口（替换 MergedDictionaries；保留 XAML 定义的本地样式）。</summary>
         public static void ApplyToWindow(Window window, string theme)
         {
             var dict = theme == Dark ? _darkDict : _lightDict;
             if (dict == null) return;
 
-            window.Resources.Clear();
             window.Resources.MergedDictionaries.Clear();
             window.Resources.MergedDictionaries.Add(dict);
-            // InvalidateVisual 可省略 — MergedDictionaries 变更已触发 WPF 重绘
 
             _current = theme;
             SaveTheme(theme);

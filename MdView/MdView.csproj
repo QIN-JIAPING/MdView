@@ -8,7 +8,7 @@
     <ApplicationIcon>app_icon.ico</ApplicationIcon>
     <AssemblyName>MdView</AssemblyName>
     <RootNamespace>MdView</RootNamespace>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
     <LangVersion>latest</LangVersion>
     <EnableDefaultPageItems>false</EnableDefaultPageItems>
@@ -18,6 +18,8 @@
   <ItemGroup>
     <PackageReference Include="Markdig" Version="0.38.0" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2469.76" />
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.2.0" />
+    <PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,8 +34,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="app_icon.png"/>
-    <Resource Include="app_icon.ico"/>
+    <Resource Include="app_icon.png" />
+    <Resource Include="app_icon.ico" />
   </ItemGroup>
 
   <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
